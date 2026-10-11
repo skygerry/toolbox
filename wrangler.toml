@@ -1,9 +1,12 @@
+# Cloudflare Pages 项目配置
+#
+# 注意：Pages 项目的构建配置在 Dashboard 里设置（Build command / Output directory），
+# wrangler.toml 只描述项目本身。不要在这里写 [build] 段 ——
+# Pages 项目不识别它，会报 "Unexpected fields found in build field" 警告。
+#
+# 本地命令行部署用法：
+#   npm run build && npx wrangler pages deploy dist
+
 name = "toolbox"
 compatibility_date = "2026-10-11"
 pages_build_output_dir = "dist"
-
-[build]
-command = "npm run build"
-
-[build.environment]
-NODE_VERSION = "20"

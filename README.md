@@ -44,8 +44,9 @@ Cloudflare Pages 对无扩展名的目录路径不保证自动补 `index.html`�
 
 ## 部署到 Cloudflare Pages
 
-构建参数已写入 `wrangler.toml`（`build.command` 与 `NODE_VERSION=20`），
-Cloudflare Pages 会自动识别，Dashboard 只需确认默认值即可。
+构建参数在 **Cloudflare Dashboard** 里设置，不放在 `wrangler.toml` ——
+Pages 项目不识别 `wrangler.toml` 的 `[build]` 段，写了反而会触发
+`Unexpected fields found in build field` 警告。
 
 ### Git 集成（当前采用）
 
@@ -55,25 +56,40 @@ Cloudflare Pages 会自动识别，Dashboard 只需确认默认值即可。
 （依赖 `~/.ssh/config` 中为 github.com 指定的 `github_id_rsa`，该公钥需已加入 GitHub 账号）
 
 Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git，
-选中 `skygerry/toolbox`：
+选中 `skygerry/toolbox`，构建配置：
 
 | 配置项 | 值 |
 |---|---|
 | Framework preset | Astro |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Node.js version | 20（已在 wrangler.toml 声明） |
+| **Deploy command** | **留空**（见下方说明） |
+| Node.js version | 20（环境变量加 `NODE_VERSION=20`） |
 
 首次部署完成后会分配 `https://toolbox.pages.dev`，之后每次 `git push` 自动重建部署。
+
+> ⚠️ **Deploy command 必须留空。**
+> Pages 项目自带产物发布能力，填了反而会出错。若误填成 `npx wrangler deploy`，
+> 构建能成功但部署会失败并报：
+>
+> ```
+> ✘ [ERROR] Missing entry-point to Worker script or to assets directory
+> ```
+>
+> 因为 `wrangler deploy` 是给 **Worker 项目**用的，它需要一个 Worker 入口或 assets 目录；
+> 纯静态站点两者都没有。Pages 项目要用的是 `wrangler pages deploy`（见下方命令行方式）。
 
 ### 命令行直传
 
 ```bash
 npm run build
-npx wrangler pages deploy dist --project-name toolbox
+npx wrangler pages deploy dist
 ```
 
-首次会引导登录；需先在 Dashboard 创建同名 project。
+首次会引导登录；需先在 Dashboard 创建一次同名 project。
+
+> `pages deploy` 不支持 `--dry-run`（它需要真实认证），但 `wrangler deploy --dry-run`
+> 可以用来检查配置是否被正确解析。
 
 ### 自定义域名
 
