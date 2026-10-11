@@ -42,11 +42,10 @@ Cloudflare Pages 对无扩展名的目录路径不保证自动补 `index.html`�
 因此新增页面时，首页链接必须写成 `/tools/<name>.html`（带 `tools/` 前缀），
 写成 `/<name>.html` 会 404 —— 因为产物实际位于 `dist/tools/` 下。
 
-## 部署到 Cloudflare Pages
+## 部署到 Cloudflare
 
-构建参数在 **Cloudflare Dashboard** 里设置，不放在 `wrangler.toml` ——
-Pages 项目不识别 `wrangler.toml` 的 `[build]` 段，写了反而会触发
-`Unexpected fields found in build field` 警告。
+当前 Cloudflare 的部署流程是 **Workers Builds**（Deploy command / Preview command 均为必填）。
+纯静态站点也走这条路，由 wrangler 的 assets 机制分发 `dist` 产物。
 
 ### Git 集成（当前采用）
 
@@ -55,41 +54,50 @@ Pages 项目不识别 `wrangler.toml` 的 `[build]` 段，写了反而会触发
 远端地址使用 SSH：`git@github.com:skygerry/toolbox.git`
 （依赖 `~/.ssh/config` 中为 github.com 指定的 `github_id_rsa`，该公钥需已加入 GitHub 账号）
 
-Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git，
-选中 `skygerry/toolbox`，构建配置：
+Cloudflare Dashboard → Workers & Pages → Create application → Pages → Connect to Git，
+选中 `skygerry/toolbox`：
 
 | 配置项 | 值 |
 |---|---|
-| Framework preset | Astro |
+| Project name | `toolbox` |
+| Production branch | `master` |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
-| **Deploy command** | **留空**（见下方说明） |
+| **Deploy command** | `npx wrangler deploy`（默认值，保持） |
+| Preview command | `npx wrangler preview`（默认值，保持） |
 | Node.js version | 20（环境变量加 `NODE_VERSION=20`） |
 
-首次部署完成后会分配 `https://toolbox.pages.dev`，之后每次 `git push` 自动重建部署。
+部署完成后会分配 `https://toolbox.pages.dev`，之后每次 `git push` 自动重建部署。
 
-> ⚠️ **Deploy command 必须留空。**
-> Pages 项目自带产物发布能力，填了反而会出错。若误填成 `npx wrangler deploy`，
-> 构建能成功但部署会失败并报：
+> **关键：`wrangler.toml` 里的 `[assets]` 段不能少。**
+>
+> Deploy command 用的是 `wrangler deploy`，它需要知道部署哪个目录。
+> 没有 assets 配置时会直接失败：
 >
 > ```
 > ✘ [ERROR] Missing entry-point to Worker script or to assets directory
 > ```
 >
-> 因为 `wrangler deploy` 是给 **Worker 项目**用的，它需要一个 Worker 入口或 assets 目录；
-> 纯静态站点两者都没有。Pages 项目要用的是 `wrangler pages deploy`（见下方命令行方式）。
+> 本项目是无 Worker 脚本的纯静态站点，靠这行指明产物位置：
+>
+> ```toml
+> [assets]
+> directory = "./dist"
+> ```
+>
+> 可用 `npx wrangler deploy --dry-run` 本地验证，正常应输出
+> `✨ Read N files from the assets directory .../dist`。
 
 ### 命令行直传
 
 ```bash
 npm run build
-npx wrangler pages deploy dist
+npx wrangler deploy
 ```
 
-首次会引导登录；需先在 Dashboard 创建一次同名 project。
-
-> `pages deploy` 不支持 `--dry-run`（它需要真实认证），但 `wrangler deploy --dry-run`
-> 可以用来检查配置是否被正确解析。
+> 若日后改回经典 Pages 流程（Deploy command 留空、由平台自动发布产物），
+> 需删除 `[assets]` 段、恢复 `pages_build_output_dir = "dist"`，
+> 命令行方式也相应改为 `npx wrangler pages deploy dist`。
+> 两套方案不可混用。
 
 ### 自定义域名
 
