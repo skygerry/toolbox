@@ -51,6 +51,9 @@ Cloudflare Pages 会自动识别，Dashboard 只需确认默认值即可。
 
 远端仓库：<https://github.com/skygerry/toolbox>
 
+远端地址使用 SSH：`git@github.com:skygerry/toolbox.git`
+（依赖 `~/.ssh/config` 中为 github.com 指定的 `github_id_rsa`，该公钥需已加入 GitHub 账号）
+
 Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git，
 选中 `skygerry/toolbox`：
 
