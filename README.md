@@ -44,8 +44,13 @@ Cloudflare Pages 对无扩展名的目录路径不保证自动补 `index.html`�
 
 ## 部署到 Cloudflare
 
+线上地址：**<https://toolbox.13601284287.workers.dev/>**
+
 当前 Cloudflare 的部署流程是 **Workers Builds**（Deploy command / Preview command 均为必填）。
 纯静态站点也走这条路，由 wrangler 的 assets 机制分发 `dist` 产物。
+
+> 注：访问 `/tools/json.html` 会被 307 重定向到 `/tools/json` —— Cloudflare 的 assets
+> 机制默认省略 `.html` 扩展名（`html_handling`）。这是正常行为，链接仍然有效。
 
 ### Git 集成（当前采用）
 
@@ -66,7 +71,7 @@ Cloudflare Dashboard → Workers & Pages → Create application → Pages → Co
 | Preview command | `npx wrangler preview`（默认值，保持） |
 | Node.js version | 20（环境变量加 `NODE_VERSION=20`） |
 
-部署完成后会分配 `https://toolbox.pages.dev`，之后每次 `git push` 自动重建部署。
+之后每次 `git push` 自动重建部署。
 
 > **关键：`wrangler.toml` 里的 `[assets]` 段不能少。**
 >
