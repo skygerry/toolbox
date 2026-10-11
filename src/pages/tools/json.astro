@@ -1,0 +1,142 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="JSON 格式化" desc="JSON 美化、压缩与语法校验，纯前端处理">
+  <h1 class="page-title">JSON 格式化</h1>
+  <p class="page-desc">美化 / 压缩 / 校验，输入非法时会标出出错位置。</p>
+
+  <div class="card">
+    <label class="field-label" for="in">输入</label>
+    <textarea id="in" placeholder='粘贴 JSON，例如 {"name":"yksdk","version":198}'></textarea>
+    <div class="btn-row">
+      <button class="btn primary" id="fmt">美化</button>
+      <button class="btn" id="min">压缩</button>
+      <button class="btn" id="sort">键名排序</button>
+      <button class="btn" id="cp">复制结果</button>
+      <button class="btn" id="clr">清空</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <label class="field-label" for="out">输出</label>
+    <textarea id="out" readonly></textarea>
+  </div>
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const inp = $<HTMLTextAreaElement>('in');
+  const out = $<HTMLTextAreaElement>('out');
+  const msg = $('msg');
+
+  function say(text: string, kind: '' | 'ok' | 'err' = '') {
+    msg.textContent = text;
+    msg.className = `msg ${kind}`;
+  }
+
+  // V8 的报错格式变过：老版本给 "position N"，新版把出错处的输入片段直接
+  // 附在消息里、且不再带 position。所以两条路都走一遍。
+  function locate(text: string, errMsg: string) {
+    // 路径 1：老版 position
+    const m = /position (\d+)/.exec(errMsg);
+    if (m) return offsetToLineCol(text, Number(m[1]));
+
+    // 路径 2：新版消息里内嵌了片段，用它反查原文中的位置
+    const q1 = errMsg.indexOf('"');
+    if (q1 >= 0) {
+      const frag = errMsg.slice(q1 + 1, errMsg.lastIndexOf('"'));
+      if (frag) {
+        const at = text.indexOf(frag);
+        if (at >= 0) return offsetToLineCol(text, at);
+      }
+    }
+
+    // 路径 3：两条都落空就二分找出第一个无法解析的前缀
+    return binarySearch(text);
+  }
+
+  function offsetToLineCol(text: string, pos: number) {
+    const upto = text.slice(0, pos);
+    const line = upto.split('\n').length;
+    const col = pos - upto.lastIndexOf('\n');
+    return { line, col };
+  }
+
+  // 二分定位：找到使 JSON.parse 抛错的最小前缀长度，即出错位置
+  function binarySearch(text: string) {
+    let lo = 1;
+    let hi = text.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      try {
+        JSON.parse(text.slice(0, mid));
+        lo = mid + 1;
+      } catch {
+        hi = mid;
+      }
+    }
+    return offsetToLineCol(text, Math.min(lo, text.length - 1));
+  }
+
+  function run(indent: number | string | null, sort = false) {
+    const raw = inp.value.trim();
+    if (!raw) {
+      out.value = '';
+      say('');
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      const err = e as Error;
+      const { line, col } = locate(raw, err.message);
+      say(`✗ 语法错误：第 ${line} 行第 ${col} 列附近 — ${err.message}`, 'err');
+      out.value = '';
+      return;
+    }
+    if (sort) {
+      const sortKeys = (v: unknown): unknown => {
+        if (Array.isArray(v)) return v.map(sortKeys);
+        if (v && typeof v === 'object') {
+          return Object.fromEntries(
+            Object.entries(v as Record<string, unknown>)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([k, val]) => [k, sortKeys(val)])
+          );
+        }
+        return v;
+      };
+      parsed = sortKeys(parsed);
+    }
+    out.value = JSON.stringify(parsed, null, indent);
+    say('✓ 解析成功', 'ok');
+  }
+
+  $('fmt').addEventListener('click', () => run(2));
+  $('min').addEventListener('click', () => run(null));
+  $('sort').addEventListener('click', () => run(2, true));
+  $('clr').addEventListener('click', () => {
+    inp.value = '';
+    out.value = '';
+    say('');
+  });
+  $('cp').addEventListener('click', async () => {
+    if (!out.value) return say('没有可复制的结果', 'err');
+    try {
+      await navigator.clipboard.writeText(out.value);
+      say('✓ 已复制到剪贴板', 'ok');
+    } catch {
+      out.select();
+      say('复制被拒绝，已全选，请手动复制', 'err');
+    }
+  });
+  // 输入停止 400ms 后自动格式化，省得每次点按钮
+  let timer: number;
+  inp.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => run(2), 400);
+  });
+</script>

@@ -1,0 +1,96 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Base64 编解码" desc="文本与 Base64 互转，支持中文与 URL-safe">
+  <h1 class="page-title">Base64 编解码</h1>
+  <p class="page-desc">自动处理 UTF-8 中文，不会出现乱码；解码失败会给出原因。</p>
+
+  <div class="card">
+    <label class="field-label" for="in">输入</label>
+    <textarea id="in" placeholder="输入明文进行编码，或粘贴 Base64 进行解码"></textarea>
+    <div class="btn-row">
+      <button class="btn primary" id="enc">编码</button>
+      <button class="btn" id="dec">解码</button>
+      <button class="btn" id="urlsafe">编码为 URL-safe</button>
+      <button class="btn" id="swap">↕ 互填</button>
+      <button class="btn" id="clr">清空</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <label class="field-label" for="out">输出</label>
+    <textarea id="out" readonly></textarea>
+  </div>
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const inp = $<HTMLTextAreaElement>('in');
+  const out = $<HTMLTextAreaElement>('out');
+  const msg = $('msg');
+  const say = (t: string, k: '' | 'ok' | 'err' = '') => {
+    msg.textContent = t;
+    msg.className = `msg ${k}`;
+  };
+
+  $('enc').addEventListener('click', () => encode(false));
+  $('urlsafe').addEventListener('click', () => encode(true));
+
+  function encode(urlSafe: boolean) {
+    const raw = inp.value;
+    if (!raw) return reset();
+    try {
+      const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(raw)));
+      out.value = urlSafe ? b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') : b64;
+      say(`✓ 已编码（${raw.length} 字符 → ${out.value.length} 字符）`, 'ok');
+    } catch (e) {
+      out.value = '';
+      say(`✗ 编码失败：${(e as Error).message}`, 'err');
+    }
+  }
+
+  $('dec').addEventListener('click', () => {
+    let raw = inp.value.trim();
+    if (!raw) return reset();
+    // 容忍用户粘贴时带了换行/空白，以及 URL-safe 变体
+    raw = raw.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    const pad = raw.length % 4;
+    if (pad) raw += '='.repeat(4 - pad);
+    try {
+      const bin = atob(raw);
+      const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+      out.value = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      say('✓ 已解码', 'ok');
+    } catch {
+      // 多半是二进制数据或 Base64 写错了，给出可操作提示
+      try {
+        const bin = atob(raw);
+        const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+        out.value = `[二进制数据，${bytes.length} 字节] 十六进制：\n` +
+          Array.from(bytes.slice(0, 256))
+            .map((b, i) => (i % 16 === 0 ? '\n' : '') + b.toString(16).padStart(2, '0'))
+            .join(' ');
+        say('⚠ 这不是合法的 UTF-8 文本，已按二进制展示', 'err');
+      } catch {
+        out.value = '';
+        say('✗ 不是有效的 Base64 字符串', 'err');
+      }
+    }
+  });
+
+  $('swap').addEventListener('click', () => {
+    const a = inp.value;
+    inp.value = out.value;
+    out.value = a;
+    say('已交换输入输出');
+  });
+  $('clr').addEventListener('click', reset);
+
+  function reset() {
+    inp.value = '';
+    out.value = '';
+    say('');
+  }
+</script>

@@ -1,0 +1,131 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="哈希摘要计算" desc="MD5 / SHA 系列本地计算">
+  <h1 class="page-title">哈希摘要计算</h1>
+  <p class="page-desc">
+    浏览器原生只提供 SHA 系列；MD5 用内置算法实现，适合做非安全用途的指纹对比。
+  </p>
+
+  <div class="card">
+    <label class="field-label" for="in">输入文本</label>
+    <textarea id="in" placeholder="输入要计算摘要的文本，支持中文"></textarea>
+    <div class="btn-row">
+      <button class="btn primary" id="calc">计算全部</button>
+      <button class="btn" id="clr">清空</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <label class="field-label" for="out">摘要结果</label>
+    <textarea id="out" readonly placeholder="结果按算法分组输出"></textarea>
+  </div>
+
+  <div class="card">
+    <label class="field-label" for="upper">输出大小写</label>
+    <select id="upper">
+      <option value="lower">小写（默认）</option>
+      <option value="upper">大写</option>
+    </select>
+    <div class="hint">
+      ⚠ MD5 与 SHA-1 已被证明存在碰撞，不适合安全场景；签名、密码存储请使用 SHA-256 及以上。
+    </div>
+  </div>
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const inp = $<HTMLTextAreaElement>('in');
+  const out = $<HTMLTextAreaElement>('out');
+  const msg = $('msg');
+
+  // MD5 纯 JS 实现，避免为一个过时算法引入额外依赖
+  function md5(bytes: Uint8Array): string {
+    const S = [
+      7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+      5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+      4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+      6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+    ];
+    const K = new Uint32Array(64);
+    for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296);
+
+    const len = bytes.length;
+    const withPad = (((len + 8) >> 6) + 1) << 6;
+    const buf = new Uint8Array(withPad);
+    buf.set(bytes);
+    buf[len] = 0x80;
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(withPad - 8, (len * 8) >>> 0, true);
+    dv.setUint32(withPad - 4, Math.floor(len / 536870912) >>> 0, true);
+
+    let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+    const M = new Uint32Array(16);
+    // 所有中间量都按无符号 32 位处理，避免 JS 有符号运算在左移时出错
+    const rotl = (x: number, c: number) => (((x << c) | (x >>> (32 - c))) >>> 0);
+
+    for (let chunk = 0; chunk < withPad; chunk += 64) {
+      for (let j = 0; j < 16; j++) M[j] = dv.getUint32(chunk + j * 4, true);
+      let A = a0, B = b0, C = c0, D = d0;
+      for (let i = 0; i < 64; i++) {
+        let F: number, g: number;
+        if (i < 16) { F = ((B & C) | (~B & D)) >>> 0; g = i; }
+        else if (i < 32) { F = ((D & B) | (~D & C)) >>> 0; g = (5 * i + 1) % 16; }
+        else if (i < 48) { F = ((B ^ C ^ D)) >>> 0; g = (3 * i + 5) % 16; }
+        else { F = ((C ^ (B | ~D))) >>> 0; g = (7 * i) % 16; }
+        const t = (rotl((A + F + K[i] + M[g]) >>> 0, S[i]) + B) >>> 0;
+        A = D; D = C; C = B; B = t;
+      }
+      a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0;
+      c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
+    }
+    // RFC 1321 规定 A/B/C/D 按小端字节序追加，所以这里要先做字内字节反转
+    const swap = (n: number) => {
+      const x = n >>> 0;
+      return ((((x & 0xff) << 24) | ((x & 0xff00) << 8) |
+               ((x >>> 8) & 0xff00) | (x >>> 24)) >>> 0);
+    };
+    const hex = (n: number) => (n >>> 0).toString(16).padStart(8, '0');
+    return hex(swap(a0)) + hex(swap(b0)) + hex(swap(c0)) + hex(swap(d0));
+  }
+
+  async function digest(algo: string, bytes: Uint8Array) {
+    const buf = await crypto.subtle.digest(algo, bytes);
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  $('calc').addEventListener('click', async () => {
+    const raw = inp.value;
+    if (!raw) {
+      out.value = '';
+      msg.textContent = '';
+      msg.className = 'msg';
+      return;
+    }
+    const bytes = new TextEncoder().encode(raw);
+    const [sha1, sha256, sha384, sha512] = await Promise.all([
+      digest('SHA-1', bytes),
+      digest('SHA-256', bytes),
+      digest('SHA-384', bytes),
+      digest('SHA-512', bytes),
+    ]);
+    const m5 = md5(bytes);
+    let res = `MD5    (32) ${m5}\nSHA-1  (40) ${sha1}\nSHA-256(64) ${sha256}\nSHA-384(96) ${sha384}\nSHA-512(128) ${sha512}`;
+    if ($<HTMLSelectElement>('upper').value === 'upper') {
+      res = res.replace(/\b[0-9a-f]{32,}\b/g, (s) => s.toUpperCase());
+    }
+    out.value = res;
+    msg.textContent = `✓ 输入 ${bytes.length} 字节，已计算 5 种摘要`;
+    msg.className = 'msg ok';
+  });
+
+  $('clr').addEventListener('click', () => {
+    inp.value = '';
+    out.value = '';
+    msg.textContent = '';
+  });
+</script>

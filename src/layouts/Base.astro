@@ -1,0 +1,195 @@
+---
+interface Props {
+  title: string;
+  desc?: string;
+}
+const { title, desc = '纯前端开发者工具箱' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={desc} />
+    <title>{title} · Toolbox</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔧</text></svg>" />
+    <style is:global>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --border: #e3e6ea;
+        --text: #1c2024;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --accent-soft: #eff4ff;
+        --ok: #16a34a;
+        --err: #dc2626;
+        --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 64px; }
+
+      header.site {
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+        margin-bottom: 32px;
+      }
+      header.site .inner {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header.site a.brand {
+        font-weight: 650;
+        font-size: 16px;
+        color: var(--text);
+        text-decoration: none;
+        letter-spacing: -0.01em;
+      }
+      header.site a.brand:hover { color: var(--accent); }
+      header.site nav { margin-left: auto; display: flex; gap: 18px; }
+      header.site nav a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      header.site nav a:hover { color: var(--accent); }
+
+      h1.page-title { font-size: 26px; letter-spacing: -0.02em; margin-bottom: 6px; }
+      p.page-desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      label.field-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 550;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      textarea, input[type='text'], select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: var(--mono);
+        font-size: 13px;
+        background: #fbfcfd;
+        color: var(--text);
+        resize: vertical;
+        transition: border-color .15s, box-shadow .15s;
+      }
+      textarea:focus, input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      textarea { min-height: 110px; line-height: 1.55; }
+
+      .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+      button.btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 550;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+      }
+      button.btn:hover { border-color: var(--accent); color: var(--accent); }
+      button.btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      button.btn.primary:hover { opacity: .88; color: #fff; }
+
+      .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+      .msg { font-size: 13px; margin-top: 10px; min-height: 20px; }
+      .msg.err { color: var(--err); }
+      .msg.ok { color: var(--ok); }
+
+      .grid-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 14px;
+      }
+      .tool-card {
+        display: block;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color .15s, transform .15s, box-shadow .15s;
+      }
+      .tool-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(37, 99, 235, .08);
+      }
+      .tool-card .ic { font-size: 22px; display: block; margin-bottom: 8px; }
+      .tool-card .tt { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+      .tool-card .td { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+      footer.site {
+        border-top: 1px solid var(--border);
+        margin-top: 40px;
+        padding-top: 20px;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+      }
+      .privacy-note {
+        background: var(--accent-soft);
+        border: 1px solid #d6e3ff;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+        color: #1e40af;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="inner">
+        <a class="brand" href="/">🔧 Toolbox</a>
+        <nav>
+          <a href="/">全部工具</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <slot />
+    </main>
+
+    <footer class="site">
+      <p>纯前端实现 · 所有数据仅在本地浏览器处理，不上传服务器</p>
+    </footer>
+  </body>
+</html>

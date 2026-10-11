@@ -1,0 +1,115 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="时间戳转换" desc="Unix 时间戳与日期时间互转">
+  <h1 class="page-title">时间戳转换</h1>
+  <p class="page-desc">秒级和毫秒级会自动识别，也可以反向用日期生成时间戳。</p>
+
+  <div class="card">
+    <label class="field-label" for="ts">时间戳</label>
+    <input type="text" id="ts" placeholder="例如 1789012345 或 1789012345000" />
+    <div class="btn-row">
+      <button class="btn primary" id="now">用当前时间</button>
+      <button class="btn" id="zero">Unix 纪元 (0)</button>
+    </div>
+    <div class="msg" id="tsmsg"></div>
+  </div>
+
+  <div class="card">
+    <label class="field-label" id="outLabel">日期时间</label>
+    <input type="text" id="dt" placeholder="例如 2026-10-11 13:30:00" />
+    <div class="btn-row">
+      <button class="btn" id="local">按本地时区</button>
+      <button class="btn" id="utc">按 UTC</button>
+      <button class="btn" id="iso">按 ISO 8601</button>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const tsEl = $<HTMLInputElement>('ts');
+  const dtEl = $<HTMLInputElement>('dt');
+  const msg = $('tsmsg');
+
+  const pad = (n: number, w = 2) => String(n).padStart(w, '0');
+
+  function fmtLocal(d: Date) {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+           `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function fmtUtc(d: Date) {
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
+           `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  }
+
+  function fromTs() {
+    const raw = tsEl.value.trim();
+    if (!raw) {
+      dtEl.value = '';
+      msg.textContent = '';
+      return;
+    }
+    if (!/^-?\d+$/.test(raw)) {
+      dtEl.value = '';
+      msg.textContent = '✗ 只能是纯数字';
+      msg.className = 'msg err';
+      return;
+    }
+    const n = Number(raw);
+    // 位数判断秒/毫秒：10 位以内视为秒，13 位左右视为毫秒
+    const ms = Math.abs(n) < 1e11 ? n * 1000 : n;
+    const d = new Date(ms);
+    if (Number.isNaN(d.getTime())) {
+      dtEl.value = '';
+      msg.textContent = '✗ 超出可表示范围';
+      msg.className = 'msg err';
+      return;
+    }
+    const unit = Math.abs(n) < 1e11 ? '秒' : '毫秒';
+    dtEl.value = fmtLocal(d);
+    msg.textContent = `✓ 已按${unit}解析 → ${fmtLocal(d)}（本地） / ${fmtUtc(d)}（UTC）`;
+    msg.className = 'msg ok';
+  }
+
+  function fromDt(label: string, setter?: (d: Date) => string) {
+    const raw = dtEl.value.trim();
+    if (!raw) {
+      tsEl.value = '';
+      msg.textContent = '';
+      return;
+    }
+    let d: Date;
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(raw)) {
+      // Safari 不认 'YYYY-MM-DD HH:mm:ss'，换成标准 ISO 形式
+      d = new Date(raw.replace(' ', 'T'));
+    } else {
+      d = new Date(raw);
+    }
+    if (Number.isNaN(d.getTime())) {
+      tsEl.value = '';
+      msg.textContent = '✗ 无法识别这个日期格式';
+      msg.className = 'msg err';
+      return;
+    }
+    const secs = Math.floor(d.getTime() / 1000);
+    tsEl.value = String(secs);
+    msg.textContent = `✓ ${label} → 秒级 ${secs} / 毫秒级 ${secs * 1000}`;
+    msg.className = 'msg ok';
+    if (setter) dtEl.value = setter(d);
+  }
+
+  tsEl.addEventListener('input', fromTs);
+  $('now').addEventListener('click', () => {
+    tsEl.value = String(Math.floor(Date.now() / 1000));
+    fromTs();
+  });
+  $('zero').addEventListener('click', () => {
+    tsEl.value = '0';
+    fromTs();
+  });
+  $('local').addEventListener('click', () => fromDt('本地时区'));
+  $('utc').addEventListener('click', () => fromDt('UTC', fmtUtc));
+  $('iso').addEventListener('click', () => fromDt('ISO 8601', (d) => d.toISOString()));
+</script>

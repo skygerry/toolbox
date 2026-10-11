@@ -1,0 +1,83 @@
+---
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="URL 编解码" desc="查询参数解析与 URL 编码">
+  <h1 class="page-title">URL 编解码</h1>
+  <p class="page-desc">排查回调 URL、签名参数时比浏览器自带的开发者工具更快。</p>
+
+  <div class="card">
+    <label class="field-label" for="in">输入</label>
+    <textarea id="in" placeholder="粘贴完整 URL 或一段待编码的文本"></textarea>
+    <div class="btn-row">
+      <button class="btn primary" id="enc">编码</button>
+      <button class="btn" id="dec">解码</button>
+      <button class="btn" id="parse">解析查询参数</button>
+      <button class="btn" id="clr">清空</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <label class="field-label" for="out">输出</label>
+    <textarea id="out" readonly></textarea>
+  </div>
+</Base>
+
+<script>
+  const $ = (id: string) => document.getElementById(id)!;
+  const inp = $<HTMLTextAreaElement>('in');
+  const out = $<HTMLTextAreaElement>('out');
+  const msg = $('msg');
+  const say = (t: string, k: '' | 'ok' | 'err' = '') => {
+    msg.textContent = t;
+    msg.className = `msg ${k}`;
+  };
+
+  $('enc').addEventListener('click', () => {
+    const raw = inp.value;
+    if (!raw) return reset();
+    out.value = encodeURIComponent(raw);
+    say('✓ 已编码（空格 → %20，保留 : / ? 等保留字符）', 'ok');
+  });
+
+  $('dec').addEventListener('click', () => {
+    const raw = inp.value.trim();
+    if (!raw) return reset();
+    // 先把 + 还原成空格，再解码——表单提交时空格就是被编码成 + 的
+    try {
+      out.value = decodeURIComponent(raw.replace(/\+/g, ' '));
+      say('✓ 已解码', 'ok');
+    } catch (e) {
+      out.value = '';
+      say(`✗ 解码失败，通常是 % 后面不是合法的十六进制：${(e as Error).message}`, 'err');
+    }
+  });
+
+  $('parse').addEventListener('click', () => {
+    const raw = inp.value.trim();
+    if (!raw) return reset();
+    try {
+      const u = new URL(raw);
+      const rows: string[] = [];
+      u.searchParams.forEach((v, k) => {
+        const safe = (s: string) => s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        rows.push(`${k} = ${safe(v)}`);
+      });
+      out.value = rows.length
+        ? rows.join('\n')
+        : '（这个 URL 没有查询参数）';
+      say(rows.length ? `✓ 解析出 ${rows.length} 个参数` : '提示：未找到查询参数', rows.length ? 'ok' : '');
+    } catch {
+      say('✗ 不是一个完整的 URL，请包含 http:// 或 https:// 开头', 'err');
+      out.value = '';
+    }
+  });
+
+  $('clr').addEventListener('click', reset);
+  function reset() {
+    inp.value = '';
+    out.value = '';
+    say('');
+  }
+</script>

@@ -1,0 +1,63 @@
+---
+import Base from '../layouts/Base.astro';
+
+const tools = [
+  {
+    href: '/tools/json.html',
+    ic: '{ }',
+    title: 'JSON 格式化',
+    desc: '美化 / 压缩 / 语法校验，自动识别报错位置',
+  },
+  {
+    href: '/tools/timestamp.html',
+    ic: '🕐',
+    title: '时间戳转换',
+    desc: 'Unix 时间戳与日期时间互转，支持秒与毫秒',
+  },
+  {
+    href: '/tools/base64.html',
+    ic: '🔤',
+    title: 'Base64 编解码',
+    desc: '文本与 Base64 互转，支持 URL-safe 与中文',
+  },
+  {
+    href: '/tools/url.html',
+    ic: '🔗',
+    title: 'URL 编解码',
+    desc: '查询参数解析与整体编码，适合排查回调 URL',
+  },
+  {
+    href: '/tools/hash.html',
+    ic: '#',
+    title: '哈希摘要计算',
+    desc: 'MD5 / SHA-1 / SHA-256 / SHA-512，本地计算',
+  },
+  {
+    href: '/tools/jwt.html',
+    ic: '🎫',
+    title: 'JWT 解析',
+    desc: '拆解 Header 与 Payload，校验 exp 过期时间',
+  },
+];
+---
+
+<Base title="全部工具">
+  <h1 class="page-title">开发者工具箱</h1>
+  <p class="page-desc">一组纯前端的小工具，用得上的才留。</p>
+
+  <div class="privacy-note">
+    所有计算都在你的浏览器里完成，输入内容不会发往任何服务器，断网也能用。
+  </div>
+
+  <div class="grid-links">
+    {
+      tools.map((t) => (
+        <a class="tool-card" href={t.href}>
+          <span class="ic">{t.ic}</span>
+          <div class="tt">{t.title}</div>
+          <div class="td">{t.desc}</div>
+        </a>
+      ))
+    }
+  </div>
+</Base>
