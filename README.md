@@ -101,3 +101,4 @@ Dashboard → Pages → 项目 → Custom domains → 添加域名，
 ```bash
 npm install --registry=https://registry.npmmirror.com --no-audit --no-fund
 ```
+// SSH 改造验证 2026-10-11 18:28:24
