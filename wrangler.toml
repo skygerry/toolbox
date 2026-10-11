@@ -1,12 +1,19 @@
-# Cloudflare Pages 项目配置
+# Cloudflare Workers（静态资源）项目配置
 #
-# 注意：Pages 项目的构建配置在 Dashboard 里设置（Build command / Output directory），
-# wrangler.toml 只描述项目本身。不要在这里写 [build] 段 ——
-# Pages 项目不识别它，会报 "Unexpected fields found in build field" 警告。
+# 说明：当前 Cloudflare 的部署流程是 Workers Builds，
+# 部署命令为 `npx wrangler deploy`，产物目录由本文件的 assets 段指定。
+# 若缺少 assets，wrangler 会报：
+#   ✘ [ERROR] Missing entry-point to Worker script or to assets directory
 #
-# 本地命令行部署用法：
-#   npm run build && npx wrangler pages deploy dist
+# 若改用经典 Pages 流程（Deploy command 留空），需删除下方 [assets] 段，
+# 并把 pages_build_output_dir 改回 dist。
 
 name = "toolbox"
 compatibility_date = "2026-10-11"
-pages_build_output_dir = "dist"
+
+# 纯静态站点：没有 Worker 脚本，仅由 Workers 分发 dist 产物
+[assets]
+directory = "./dist"
+
+# 本项目全部路由都是显式 .html 文件，不存在 SPA 回退需求，
+# 所以保持默认的 not_found_handling 即可。
