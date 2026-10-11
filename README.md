@@ -44,18 +44,24 @@ Cloudflare Pages 对无扩展名的目录路径不保证自动补 `index.html`�
 
 ## 部署到 Cloudflare Pages
 
-### Git 集成（推荐）
+构建参数已写入 `wrangler.toml`（`build.command` 与 `NODE_VERSION=20`），
+Cloudflare Pages 会自动识别，Dashboard 只需确认默认值即可。
 
-推送到 GitHub 后，在 Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git：
+### Git 集成（当前采用）
+
+远端仓库：<https://github.com/skygerry/toolbox>
+
+Cloudflare Dashboard → Workers & Pages → Create → Pages → Connect to Git，
+选中 `skygerry/toolbox`：
 
 | 配置项 | 值 |
 |---|---|
 | Framework preset | Astro |
 | Build command | `npm run build` |
 | Build output directory | `dist` |
-| Node.js version | 环境变量加 `NODE_VERSION=20` |
+| Node.js version | 20（已在 wrangler.toml 声明） |
 
-每次 push 自动重新构建部署。
+首次部署完成后会分配 `https://toolbox.pages.dev`，之后每次 `git push` 自动重建部署。
 
 ### 命令行直传
 
